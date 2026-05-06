@@ -45,8 +45,6 @@ let secretTapTimer = 0;
 let romanceTimer = 0;
 let romanceCloseTimer = 0;
 let romanceEffectTimer = 0;
-let nativeKeyboardInset = 0;
-let visualKeyboardInset = 0;
 
 const md = createMarkdownRenderer();
 
@@ -59,7 +57,6 @@ function init() {
   editor.value = localStorage.getItem(STORAGE_KEY) ?? defaultDraft;
   setView(localStorage.getItem(VIEW_KEY) || "edit");
   bindUI();
-  bindKeyboardOffset();
   registerServiceWorker();
   renderNow();
 }
@@ -187,51 +184,6 @@ function bindUI() {
   });
 
   window.addEventListener("beforeunload", saveDraft);
-}
-
-function bindKeyboardOffset() {
-  window.setNativeInsets = setNativeInsets;
-
-  if (!window.visualViewport) {
-    syncKeyboardInset();
-    return;
-  }
-
-  const baseViewportHeight = window.innerHeight;
-  const sync = () => {
-    const viewport = window.visualViewport;
-    const visualInset = baseViewportHeight - viewport.height - Math.max(0, viewport.offsetTop);
-    visualKeyboardInset = visualInset > 80 ? visualInset : 0;
-    syncKeyboardInset();
-  };
-
-  window.visualViewport.addEventListener("resize", sync);
-  window.visualViewport.addEventListener("scroll", sync);
-  window.addEventListener("resize", sync);
-  sync();
-}
-
-function setNativeInsets(payload) {
-  const next = payload && typeof payload === "object" ? payload : {};
-  nativeKeyboardInset = Math.max(0, Number(next.keyboard || 0));
-  const hasKeyboard = Math.max(nativeKeyboardInset, visualKeyboardInset) > 0;
-
-  if (!hasKeyboard && Number.isFinite(Number(next.top))) {
-    document.documentElement.style.setProperty("--safe-top", `${Math.max(0, Number(next.top))}px`);
-  }
-
-  if (!hasKeyboard && Number.isFinite(Number(next.bottom))) {
-    document.documentElement.style.setProperty("--safe-bottom", `${Math.max(0, Number(next.bottom))}px`);
-  }
-
-  syncKeyboardInset();
-}
-
-function syncKeyboardInset() {
-  const inset = Math.max(nativeKeyboardInset, visualKeyboardInset);
-  document.documentElement.style.setProperty("--native-keyboard-inset", `${Math.round(nativeKeyboardInset)}px`);
-  document.documentElement.style.setProperty("--visual-keyboard-inset", `${Math.round(visualKeyboardInset)}px`);
-  document.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
 }
 
 function registerServiceWorker() {

@@ -10,13 +10,10 @@
   --accent-soft: #e0f2ef;
   --code-bg: #f2f5f6;
   --shadow: 0 16px 36px rgba(23, 23, 23, 0.08);
-  --keyboard-inset: 0px;
-  --native-keyboard-inset: 0px;
-  --visual-keyboard-inset: 0px;
-  --safe-top: 0px;
-  --safe-bottom: 0px;
-  --app-height: 100dvh;
-  --topbar-height: calc(58px + max(env(safe-area-inset-top), var(--safe-top)));
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -50,34 +47,29 @@ button {
 }
 
 .app-shell {
-  position: fixed;
-  inset: 0;
   display: flex;
-  height: auto;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   flex-direction: column;
   background: var(--bg);
   overflow: hidden;
-  padding-top: var(--topbar-height);
 }
 
 .topbar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
+  position: relative;
+  flex: 0 0 auto;
   z-index: 30;
   display: grid;
-  height: var(--topbar-height);
-  min-height: 0;
+  min-height: calc(58px + var(--safe-top));
   grid-template-columns: minmax(44px, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   padding:
-    calc(8px + max(env(safe-area-inset-top), var(--safe-top)))
-    max(12px, env(safe-area-inset-right))
+    calc(8px + var(--safe-top))
+    max(12px, var(--safe-right))
     8px
-    max(12px, env(safe-area-inset-left));
+    max(12px, var(--safe-left));
   border-bottom: 1px solid var(--border);
   background: rgba(251, 251, 250, 0.96);
   backdrop-filter: blur(18px);
@@ -206,9 +198,18 @@ button {
 
 .workspace {
   display: grid;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   background: var(--panel);
+}
+
+.workspace[data-view="edit"],
+.workspace[data-view="preview"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.workspace[data-view="split"] {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .workspace[data-view="edit"] .preview-panel,
@@ -216,10 +217,15 @@ button {
   display: none;
 }
 
+.workspace[data-view="split"] .editor-panel {
+  border-bottom: 1px solid var(--border);
+}
+
 .editor-panel,
 .preview-panel {
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .editor {
@@ -238,9 +244,9 @@ button {
   line-height: 1.7;
   padding:
     18px
-    max(16px, env(safe-area-inset-right))
-    calc(114px + max(env(safe-area-inset-bottom), var(--safe-bottom)) + var(--keyboard-inset))
-    max(16px, env(safe-area-inset-left));
+    max(16px, var(--safe-right))
+    24px
+    max(16px, var(--safe-left));
   tab-size: 2;
 }
 
@@ -259,9 +265,9 @@ button {
   overflow: auto;
   padding:
     20px
-    max(18px, env(safe-area-inset-right))
-    calc(32px + max(env(safe-area-inset-bottom), var(--safe-bottom)))
-    max(18px, env(safe-area-inset-left));
+    max(18px, var(--safe-right))
+    calc(24px + var(--safe-bottom))
+    max(18px, var(--safe-left));
   color: var(--text);
   font-size: 16px;
   line-height: 1.75;
@@ -408,15 +414,17 @@ button {
 }
 
 .md-toolbar {
-  position: fixed;
-  right: 0;
-  bottom: calc(max(env(safe-area-inset-bottom), var(--safe-bottom)) + var(--keyboard-inset));
-  left: 0;
+  position: relative;
+  flex: 0 0 auto;
   z-index: 40;
-  padding: 8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+  padding:
+    8px
+    max(10px, var(--safe-right))
+    calc(8px + var(--safe-bottom))
+    max(10px, var(--safe-left));
   border-top: 1px solid var(--border);
   background: rgba(251, 251, 250, 0.98);
-  box-shadow: var(--shadow);
+  box-shadow: 0 -10px 24px rgba(23, 23, 23, 0.07);
   backdrop-filter: blur(18px);
 }
 
@@ -999,10 +1007,12 @@ body[data-mode="preview"] .md-toolbar {
 @media (min-width: 900px) {
   .workspace[data-view="split"] {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .workspace[data-view="split"] .editor-panel {
     display: block;
+    border-bottom: 0;
     border-right: 1px solid var(--border);
   }
 
@@ -1018,11 +1028,8 @@ body[data-mode="preview"] .md-toolbar {
   }
 
   .md-toolbar {
-    right: auto;
-    left: max(12px, env(safe-area-inset-left));
-    width: min(760px, calc(100vw - 24px));
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    padding-right: calc(max(10px, var(--safe-right)) + max(0px, (100vw - 760px) / 2));
+    padding-left: calc(max(10px, var(--safe-left)) + max(0px, (100vw - 760px) / 2));
   }
 
   .settings-panel {
