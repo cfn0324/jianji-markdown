@@ -42,6 +42,8 @@ let githubPickerState = null;
 let secretTapCount = 0;
 let secretTapTimer = 0;
 let romanceTimer = 0;
+let nativeKeyboardInset = 0;
+let visualKeyboardInset = 0;
 
 const md = createMarkdownRenderer();
 
@@ -184,19 +186,46 @@ function bindUI() {
 }
 
 function bindKeyboardOffset() {
+  window.setNativeInsets = setNativeInsets;
+
   if (!window.visualViewport) {
+    syncKeyboardInset();
     return;
   }
 
   const sync = () => {
     const viewport = window.visualViewport;
-    const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-    document.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+    visualKeyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+    document.documentElement.style.setProperty("--app-height", `${Math.round(viewport.height)}px`);
+    syncKeyboardInset();
   };
 
   window.visualViewport.addEventListener("resize", sync);
   window.visualViewport.addEventListener("scroll", sync);
+  window.addEventListener("resize", sync);
   sync();
+}
+
+function setNativeInsets(payload) {
+  const next = payload && typeof payload === "object" ? payload : {};
+  nativeKeyboardInset = Math.max(0, Number(next.keyboard || 0));
+
+  if (Number.isFinite(Number(next.top))) {
+    document.documentElement.style.setProperty("--safe-top", `${Math.max(0, Number(next.top))}px`);
+  }
+
+  if (Number.isFinite(Number(next.bottom))) {
+    document.documentElement.style.setProperty("--safe-bottom", `${Math.max(0, Number(next.bottom))}px`);
+  }
+
+  syncKeyboardInset();
+}
+
+function syncKeyboardInset() {
+  const inset = Math.max(nativeKeyboardInset, visualKeyboardInset);
+  document.documentElement.style.setProperty("--native-keyboard-inset", `${Math.round(nativeKeyboardInset)}px`);
+  document.documentElement.style.setProperty("--visual-keyboard-inset", `${Math.round(visualKeyboardInset)}px`);
+  document.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
 }
 
 function registerServiceWorker() {

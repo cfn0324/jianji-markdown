@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -32,6 +33,9 @@ public class MainActivity extends Activity {
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
     private String pendingSaveContent;
+    private int lastKeyboardInset = -1;
+    private int lastTopInset = -1;
+    private int lastBottomInset = -1;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -44,6 +48,7 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setFitsSystemWindows(false);
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        bindInsets();
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -87,6 +92,64 @@ public class MainActivity extends Activity {
         setContentView(webView);
 
         webView.loadUrl("file:///android_asset/www/index.html");
+    }
+
+    private void bindInsets() {
+        webView.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top = getSystemWindowInsetTop(insets);
+            int bottom = getSystemWindowInsetBottom(insets);
+            int keyboard = getKeyboardInset(insets);
+            notifyInsets(top, bottom, keyboard);
+            return insets;
+        });
+
+        webView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (webView == null || webView.getRootWindowInsets() == null) {
+                return;
+            }
+
+            WindowInsets insets = webView.getRootWindowInsets();
+            notifyInsets(getSystemWindowInsetTop(insets), getSystemWindowInsetBottom(insets), getKeyboardInset(insets));
+        });
+    }
+
+    private int getSystemWindowInsetTop(WindowInsets insets) {
+        return insets == null ? 0 : insets.getSystemWindowInsetTop();
+    }
+
+    private int getSystemWindowInsetBottom(WindowInsets insets) {
+        return insets == null ? 0 : insets.getSystemWindowInsetBottom();
+    }
+
+    private int getKeyboardInset(WindowInsets insets) {
+        if (insets == null) {
+            return 0;
+        }
+
+        int systemBottom = insets.getSystemWindowInsetBottom();
+        int stableBottom = insets.getStableInsetBottom();
+        return Math.max(0, systemBottom - stableBottom);
+    }
+
+    private void notifyInsets(int top, int bottom, int keyboard) {
+        if (webView == null) {
+            return;
+        }
+
+        if (top == lastTopInset && bottom == lastBottomInset && keyboard == lastKeyboardInset) {
+            return;
+        }
+
+        lastTopInset = top;
+        lastBottomInset = bottom;
+        lastKeyboardInset = keyboard;
+
+        String script = "window.setNativeInsets && window.setNativeInsets({"
+                + "top:" + top
+                + ",bottom:" + bottom
+                + ",keyboard:" + keyboard
+                + "})";
+        webView.evaluateJavascript(script, null);
     }
 
     @Override
