@@ -24,16 +24,33 @@
         </div>
 
         <div class="segmented" role="tablist" aria-label="视图">
-          <button class="segment is-active" type="button" data-view="edit" role="tab" aria-selected="true">写作</button>
-          <button class="segment" type="button" data-view="preview" role="tab" aria-selected="false">预览</button>
-          <button class="segment split-only" type="button" data-view="split" role="tab" aria-selected="false">分屏</button>
+          <button class="segment is-active" type="button" data-view="edit" role="tab" aria-selected="true">Edit</button>
+          <button class="segment" type="button" data-view="preview" role="tab" aria-selected="false">Read</button>
+          <button class="segment split-only" type="button" data-view="split" role="tab" aria-selected="false">Split</button>
         </div>
 
         <div class="top-actions">
-          <button class="icon-button" type="button" data-action="new" aria-label="新建" title="新建">+</button>
-          <button class="icon-button" type="button" data-action="open" aria-label="导入" title="导入">入</button>
-          <button class="icon-button" type="button" data-action="save" aria-label="导出" title="导出">出</button>
-          <button class="icon-button" type="button" data-action="settings" aria-label="云端设置" title="云端">云</button>
+          <button class="icon-button" type="button" data-action="new" aria-label="New" title="New">
+            <svg class="button-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </button>
+          <button class="icon-button" type="button" data-action="open" aria-label="Import" title="Import">
+            <svg class="button-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 4v11M8 11l4 4 4-4M5 19h14"></path>
+            </svg>
+          </button>
+          <button class="icon-button" type="button" data-action="save" aria-label="Export" title="Export">
+            <svg class="button-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 20V9M8 13l4-4 4 4M5 5h14"></path>
+            </svg>
+          </button>
+          <button class="icon-button" type="button" data-action="settings" aria-label="GitHub" title="GitHub">
+            <svg class="button-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M9.2 19.5 8.8 17a7.2 7.2 0 0 1-1.5-.9L5 17l-2-3.5 2-1.6a5.9 5.9 0 0 1 0-1.8l-2-1.6L5 5l2.3.9A7.2 7.2 0 0 1 8.8 5l.4-2.5h5.6l.4 2.5a7.2 7.2 0 0 1 1.5.9L19 5l2 3.5-2 1.6a5.9 5.9 0 0 1 0 1.8l2 1.6-2 3.5-2.3-.9a7.2 7.2 0 0 1-1.5.9l-.4 2.5H9.2Z"></path>
+              <circle cx="12" cy="12" r="2.7"></circle>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -56,30 +73,30 @@
 
       <footer class="md-toolbar" id="mdToolbar" aria-label="Markdown 快捷输入">
         <div class="toolbar-scroll">
-          <button class="tool-button" type="button" data-insert="h1" aria-label="一级标题" title="一级标题">H1</button>
-          <button class="tool-button" type="button" data-insert="h2" aria-label="二级标题" title="二级标题">H2</button>
-          <button class="tool-button" type="button" data-insert="h3" aria-label="三级标题" title="三级标题">H3</button>
+          <button class="tool-button" type="button" data-insert="h1" aria-label="Heading 1" title="Heading 1">H1</button>
+          <button class="tool-button" type="button" data-insert="h2" aria-label="Heading 2" title="Heading 2">H2</button>
+          <button class="tool-button" type="button" data-insert="h3" aria-label="Heading 3" title="Heading 3">H3</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button strong" type="button" data-insert="bold" aria-label="加粗" title="加粗">B</button>
-          <button class="tool-button italic" type="button" data-insert="italic" aria-label="斜体" title="斜体">I</button>
-          <button class="tool-button" type="button" data-insert="quote" aria-label="引用" title="引用">引</button>
+          <button class="tool-button strong" type="button" data-insert="bold" aria-label="Bold" title="Bold">B</button>
+          <button class="tool-button italic" type="button" data-insert="italic" aria-label="Italic" title="Italic">I</button>
+          <button class="tool-button" type="button" data-insert="quote" aria-label="Quote" title="Quote">&gt;</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button" type="button" data-insert="list" aria-label="列表" title="列表">列</button>
-          <button class="tool-button" type="button" data-insert="task" aria-label="任务" title="任务">任</button>
-          <button class="tool-button" type="button" data-insert="table" aria-label="表格" title="表格">表</button>
-          <button class="tool-button table-tool" type="button" data-insert="tableRowAdd" aria-label="增加行" title="增加行">行+</button>
-          <button class="tool-button table-tool" type="button" data-insert="tableRowDelete" aria-label="删除行" title="删除行">行-</button>
-          <button class="tool-button table-tool" type="button" data-insert="tableColAdd" aria-label="增加列" title="增加列">列+</button>
-          <button class="tool-button table-tool" type="button" data-insert="tableColDelete" aria-label="删除列" title="删除列">列-</button>
+          <button class="tool-button" type="button" data-insert="list" aria-label="List" title="List">-</button>
+          <button class="tool-button" type="button" data-insert="task" aria-label="Task" title="Task">[ ]</button>
+          <button class="tool-button" type="button" data-insert="table" aria-label="Table" title="Table">Tbl</button>
+          <button class="tool-button table-tool" type="button" data-insert="tableRowAdd" aria-label="Add row" title="Add row">R+</button>
+          <button class="tool-button table-tool" type="button" data-insert="tableRowDelete" aria-label="Delete row" title="Delete row">R-</button>
+          <button class="tool-button table-tool" type="button" data-insert="tableColAdd" aria-label="Add column" title="Add column">C+</button>
+          <button class="tool-button table-tool" type="button" data-insert="tableColDelete" aria-label="Delete column" title="Delete column">C-</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button mono" type="button" data-insert="inlineCode" aria-label="行内代码" title="行内代码">`</button>
-          <button class="tool-button mono" type="button" data-insert="codeBlock" aria-label="代码块" title="代码块">```</button>
-          <button class="tool-button math" type="button" data-insert="inlineMath" aria-label="行内公式" title="行内公式">$</button>
-          <button class="tool-button math" type="button" data-insert="mathBlock" aria-label="公式块" title="公式块">$$</button>
-          <button class="tool-button" type="button" data-insert="mermaid" aria-label="Mermaid 图" title="Mermaid 图">MM</button>
+          <button class="tool-button mono" type="button" data-insert="inlineCode" aria-label="Inline code" title="Inline code">`</button>
+          <button class="tool-button mono" type="button" data-insert="codeBlock" aria-label="Code block" title="Code block">```</button>
+          <button class="tool-button math" type="button" data-insert="inlineMath" aria-label="Inline math" title="Inline math">$</button>
+          <button class="tool-button math" type="button" data-insert="mathBlock" aria-label="Math block" title="Math block">$$</button>
+          <button class="tool-button" type="button" data-insert="mermaid" aria-label="Mermaid" title="Mermaid">MM</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button" type="button" data-insert="link" aria-label="链接" title="链接">链</button>
-          <button class="tool-button" type="button" data-insert="hr" aria-label="分隔线" title="分隔线">线</button>
+          <button class="tool-button" type="button" data-insert="link" aria-label="Link" title="Link">URL</button>
+          <button class="tool-button mono" type="button" data-insert="hr" aria-label="Divider" title="Divider">---</button>
         </div>
       </footer>
 
@@ -87,7 +104,7 @@
       <section class="settings-panel" id="settingsPanel" aria-hidden="true" aria-label="GitHub 云端设置">
         <header class="settings-header">
           <h2>GitHub</h2>
-          <button class="text-button" type="button" data-action="closeSettings">关闭</button>
+          <button class="text-button" type="button" data-action="closeSettings">Close</button>
         </header>
 
         <form class="settings-form" id="githubForm">
@@ -111,10 +128,10 @@
           </label>
 
           <div class="cloud-actions">
-            <button class="primary-button" type="button" data-github="pull">拉取</button>
-            <button class="primary-button" type="button" data-github="push">上传</button>
-            <button class="secondary-button" type="button" data-github="refresh">刷新列表</button>
-            <button class="secondary-button" type="button" data-github="save">保存配置</button>
+            <button class="primary-button" type="button" data-github="pull">Pull</button>
+            <button class="primary-button" type="button" data-github="push">Push</button>
+            <button class="secondary-button" type="button" data-github="refresh">Files</button>
+            <button class="secondary-button" type="button" data-github="save">Save</button>
           </div>
 
           <p class="settings-note">Token 只保存在本机。地址可填仓库主页或具体文件页，上传需要 Contents 读写权限。</p>
