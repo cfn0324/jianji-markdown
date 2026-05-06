@@ -100,6 +100,8 @@ button {
 }
 
 .segment {
+  display: inline-grid;
+  place-items: center;
   height: 34px;
   min-width: 48px;
   padding: 0 10px;
@@ -144,6 +146,16 @@ button {
 }
 
 .button-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.tool-icon {
   width: 18px;
   height: 18px;
   fill: none;
@@ -455,7 +467,8 @@ body[data-mode="preview"] .md-toolbar {
   background: rgba(23, 23, 23, 0.18);
 }
 
-.settings-panel {
+.settings-panel,
+.picker-panel {
   position: fixed;
   right: 0;
   bottom: 0;
@@ -476,6 +489,22 @@ body[data-mode="preview"] .md-toolbar {
   transform: translateY(0);
 }
 
+.picker-panel.is-open {
+  transform: translateY(0);
+}
+
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(23, 23, 23, 0.2);
+}
+
+.picker-panel {
+  z-index: 100;
+  max-height: min(74dvh, 520px);
+}
+
 .settings-header {
   display: flex;
   align-items: center;
@@ -489,6 +518,12 @@ body[data-mode="preview"] .md-toolbar {
   font-size: 19px;
   font-weight: 760;
   letter-spacing: 0;
+}
+
+.panel-close {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
 }
 
 .settings-form {
@@ -537,7 +572,7 @@ body[data-mode="preview"] .md-toolbar {
 
 .cloud-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
@@ -557,6 +592,16 @@ body[data-mode="preview"] .md-toolbar {
   color: #ffffff;
 }
 
+.cloud-button,
+.picker-button {
+  display: inline-grid;
+  place-items: center;
+}
+
+.cloud-button {
+  min-height: 44px;
+}
+
 .secondary-button,
 .text-button {
   border: 1px solid var(--border);
@@ -574,6 +619,18 @@ body[data-mode="preview"] .md-toolbar {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.picker-body {
+  display: grid;
+  gap: 12px;
+}
+
+.picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 @media (max-width: 430px) {
@@ -623,7 +680,6 @@ body[data-mode="preview"] .md-toolbar {
     font-size: 15px;
   }
 
-  .cloud-actions,
   .field-row {
     grid-template-columns: 1fr 1fr;
   }

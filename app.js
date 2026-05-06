@@ -14,14 +14,25 @@ const settingsBackdrop = document.querySelector("#settingsBackdrop");
 const githubFields = {
   token: document.querySelector("#githubToken"),
   url: document.querySelector("#githubUrl"),
-  fileList: document.querySelector("#githubFileList"),
-  path: document.querySelector("#githubPath")
+  fileList: document.querySelector("#githubFileList")
+};
+
+const githubPicker = {
+  backdrop: document.querySelector("#githubPickerBackdrop"),
+  panel: document.querySelector("#githubPickerPanel"),
+  title: document.querySelector("#githubPickerTitle"),
+  selectLabel: document.querySelector("#githubPickerSelectLabel"),
+  select: document.querySelector("#githubPickerSelect"),
+  newPathField: document.querySelector("#githubNewPathField"),
+  newPath: document.querySelector("#githubNewPath"),
+  note: document.querySelector("#githubPickerNote")
 };
 
 const defaultDraft = "# 未命名\n\n";
 let toastTimer = 0;
 let renderTimer = 0;
 let saveTimer = 0;
+let githubPickerState = null;
 
 const md = createMarkdownRenderer();
 
@@ -117,14 +128,26 @@ function bindUI() {
   document.querySelector("[data-action='settings']").addEventListener("click", openSettings);
   document.querySelector("[data-action='closeSettings']").addEventListener("click", closeSettings);
   settingsBackdrop.addEventListener("click", closeSettings);
+  githubPicker.backdrop.addEventListener("click", cancelGithubPicker);
 
   document.querySelectorAll("[data-github]").forEach((button) => {
     button.addEventListener("click", () => handleGithubAction(button.dataset.github));
   });
   githubFields.fileList.addEventListener("change", () => {
     if (githubFields.fileList.value) {
-      githubFields.path.value = githubFields.fileList.value;
+      saveGithubConfigFromFields(githubFields.fileList.value);
     }
+  });
+  document.querySelectorAll("[data-picker]").forEach((button) => {
+    const action = button.dataset.picker;
+    button.addEventListener("click", () => {
+      if (action === "confirm") {
+        confirmGithubPicker();
+        return;
+      }
+
+      cancelGithubPicker();
+    });
   });
 
   fileInput.addEventListener("change", importDocument);
@@ -644,7 +667,6 @@ function openSettings() {
   const config = readGithubConfig();
   githubFields.token.value = config.token || "";
   githubFields.url.value = config.url || buildGithubRepoUrl(config) || "https://github.com/cfn0324/jianji-markdown";
-  githubFields.path.value = config.path || `${getDocumentTitle()}.md`;
   populateFileList(config.files || [], config.path || "");
   settingsBackdrop.hidden = false;
   settingsPanel.classList.add("is-open");
@@ -652,19 +674,15 @@ function openSettings() {
 }
 
 function closeSettings() {
+  cancelGithubPicker();
   settingsPanel.classList.remove("is-open");
   settingsPanel.setAttribute("aria-hidden", "true");
   settingsBackdrop.hidden = true;
 }
 
 async function handleGithubAction(action) {
-  if (action === "save") {
-    await saveGithubConfigAndRefresh();
-    return;
-  }
-
   try {
-    if (action === "refresh") {
+    if (action === "save" || action === "refresh") {
       await refreshGithubFileList();
       return;
     }
@@ -696,32 +714,30 @@ function readGithubConfig() {
   }
 }
 
-function saveGithubConfigFromFields() {
+function saveGithubConfigFromFields(pathOverride) {
   const previous = readGithubConfig();
   const parsed = parseGithubUrl(githubFields.url.value);
+  const sameRepo = previous.owner === parsed.owner && previous.repo === parsed.repo;
+  const pathSource = pathOverride ?? (parsed.path || (sameRepo ? previous.path || "" : ""));
+  const path = normalizeRepoPath(pathSource);
   const config = {
     token: githubFields.token.value.trim(),
     url: parsed.url,
     owner: parsed.owner,
     repo: parsed.repo,
-    branch: parsed.branch || previous.branch || "main",
+    branch: parsed.branch || (sameRepo ? previous.branch : "") || "main",
     branchFromUrl: Boolean(parsed.branch),
-    path: normalizeRepoPath(githubFields.path.value || parsed.path || previous.path || `${getDocumentTitle()}.md`),
-    files: previous.files || []
+    path,
+    files: sameRepo ? previous.files || [] : []
   };
-
-  if (parsed.path && (!githubFields.path.value.trim() || githubFields.path.value.trim() === previous.path)) {
-    config.path = parsed.path;
-    githubFields.path.value = parsed.path;
-  }
 
   localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
   return config;
 }
 
-function validateGithubConfig(config, requiresWrite = false) {
-  if (!config.owner || !config.repo || !config.path) {
-    throw new Error("请填写 GitHub 地址和文件路径");
+function validateGithubRepoConfig(config, requiresWrite = false) {
+  if (!config.owner || !config.repo) {
+    throw new Error("请填写 GitHub 仓库地址");
   }
 
   if (requiresWrite && !config.token) {
@@ -729,12 +745,32 @@ function validateGithubConfig(config, requiresWrite = false) {
   }
 }
 
-async function pullFromGithub() {
-  let config = saveGithubConfigFromFields();
-  config = await ensureDefaultBranch(config);
-  validateGithubConfig(config);
-  showToast("正在拉取");
+function validateGithubFileConfig(config, requiresWrite = false) {
+  validateGithubRepoConfig(config, requiresWrite);
 
+  if (!config.path) {
+    throw new Error("请选择 Markdown 文件");
+  }
+}
+
+async function pullFromGithub() {
+  let config = await prepareGithubConfig();
+  const files = await refreshGithubFileListForConfig(config);
+  const path = await pickGithubFile({
+    mode: "pull",
+    files,
+    selectedPath: config.path
+  });
+
+  if (!path) {
+    return;
+  }
+
+  config = saveGithubConfigFromFields(path);
+  populateFileList(files, config.path);
+  config = await ensureDefaultBranch(config);
+  validateGithubFileConfig(config);
+  showToast("正在拉取");
   const file = await getGithubFile(config);
   const content = await decodeBase64(file.content || "");
   receiveDocument(content, config.path);
@@ -742,9 +778,23 @@ async function pullFromGithub() {
 }
 
 async function pushToGithub() {
-  let config = saveGithubConfigFromFields();
+  let config = await prepareGithubConfig(true);
+  const files = await refreshGithubFileListForConfig(config);
+  const path = await pickGithubFile({
+    mode: "push",
+    files,
+    selectedPath: config.path,
+    defaultNewPath: `${getDocumentTitle()}.md`
+  });
+
+  if (!path) {
+    return;
+  }
+
+  config = saveGithubConfigFromFields(path);
+  populateFileList(files, config.path);
   config = await ensureDefaultBranch(config);
-  validateGithubConfig(config, true);
+  validateGithubFileConfig(config, true);
   saveDraft();
   showToast("正在上传");
 
@@ -772,6 +822,13 @@ async function pushToGithub() {
     method: "PUT",
     body: JSON.stringify(body)
   });
+
+  if (!config.files.includes(config.path)) {
+    config.files = [...config.files, config.path].sort((a, b) => a.localeCompare(b));
+    localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
+    populateFileList(config.files, config.path);
+  }
+
   showToast("已上传到 GitHub");
 }
 
@@ -779,30 +836,112 @@ async function getGithubFile(config) {
   return githubRequest(config, { method: "GET" });
 }
 
-async function saveGithubConfigAndRefresh() {
-  try {
-    saveGithubConfigFromFields();
-    await refreshGithubFileList();
-  } catch (error) {
-    console.error(error);
-    showToast(error.message || "云端配置保存失败");
-  }
+async function prepareGithubConfig(requiresWrite = false) {
+  let config = saveGithubConfigFromFields();
+  validateGithubRepoConfig(config, requiresWrite);
+  config = await ensureDefaultBranch(config);
+  return config;
 }
 
 async function refreshGithubFileList() {
-  let config = saveGithubConfigFromFields();
+  const config = await prepareGithubConfig();
+  await refreshGithubFileListForConfig(config);
+}
 
-  if (!config.owner || !config.repo) {
-    throw new Error("请填写 GitHub 仓库地址");
-  }
+async function refreshGithubFileListForConfig(config) {
+  validateGithubRepoConfig(config);
 
   showToast("正在读取文件列表");
-  config = await ensureDefaultBranch(config);
   const files = await listGithubFiles(config);
   config.files = files;
   localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
   populateFileList(files, config.path);
   showToast(files.length ? "文件列表已更新" : "没有找到 Markdown 文件");
+  return files;
+}
+
+function pickGithubFile(options) {
+  return new Promise((resolve) => {
+    const mode = options.mode;
+    const files = options.files || [];
+    const selectedPath = options.selectedPath || "";
+
+    githubPickerState = {
+      mode,
+      resolve
+    };
+
+    githubPicker.title.textContent = mode === "pull" ? "选择拉取文件" : "选择上传位置";
+    githubPicker.selectLabel.textContent = mode === "pull" ? "拉取文件" : "覆盖文件";
+    githubPicker.select.textContent = "";
+    githubPicker.select.disabled = !files.length;
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = files.length ? "选择仓库文件" : "仓库中没有 Markdown 文件";
+    githubPicker.select.append(empty);
+
+    files.forEach((path) => {
+      const option = document.createElement("option");
+      option.value = path;
+      option.textContent = path;
+      option.selected = path === selectedPath;
+      githubPicker.select.append(option);
+    });
+
+    const allowNew = mode === "push";
+    githubPicker.newPathField.hidden = !allowNew;
+    githubPicker.newPath.value = "";
+    githubPicker.newPath.placeholder = options.defaultNewPath || `${getDocumentTitle()}.md`;
+    githubPicker.note.textContent = allowNew
+      ? "选择已有文件会覆盖；填写新文件名会新建。"
+      : "选择后会覆盖当前编辑区内容。";
+
+    githubPicker.backdrop.hidden = false;
+    githubPicker.panel.classList.add("is-open");
+    githubPicker.panel.setAttribute("aria-hidden", "false");
+
+    if (allowNew && !files.length) {
+      window.setTimeout(() => githubPicker.newPath.focus({ preventScroll: true }), 80);
+    } else {
+      window.setTimeout(() => githubPicker.select.focus({ preventScroll: true }), 80);
+    }
+  });
+}
+
+function confirmGithubPicker() {
+  if (!githubPickerState) {
+    return;
+  }
+
+  const mode = githubPickerState.mode;
+  const newPath = mode === "push" ? normalizeNewGithubPath(githubPicker.newPath.value) : "";
+  const selectedPath = normalizeRepoPath(githubPicker.select.value);
+  const path = newPath || selectedPath;
+
+  if (!path) {
+    showToast(mode === "push" ? "请选择文件或输入新文件名" : "请选择要拉取的文件");
+    return;
+  }
+
+  closeGithubPicker(path);
+}
+
+function cancelGithubPicker() {
+  closeGithubPicker("");
+}
+
+function closeGithubPicker(value) {
+  if (!githubPickerState) {
+    return;
+  }
+
+  const state = githubPickerState;
+  githubPickerState = null;
+  githubPicker.panel.classList.remove("is-open");
+  githubPicker.panel.setAttribute("aria-hidden", "true");
+  githubPicker.backdrop.hidden = true;
+  state.resolve(value);
 }
 
 async function listGithubFiles(config) {
@@ -814,9 +953,9 @@ async function listGithubFiles(config) {
     .map((item) => item.path)
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
-  const markdownFiles = blobs.filter((path) => /\.(md|markdown|mdown|txt)$/i.test(path));
+  const markdownFiles = blobs.filter((path) => /\.(md|markdown|mdown)$/i.test(path));
 
-  return markdownFiles.length ? markdownFiles : blobs;
+  return markdownFiles;
 }
 
 async function ensureDefaultBranch(config) {
@@ -946,6 +1085,17 @@ function populateFileList(files, selectedPath) {
 
 function normalizeRepoPath(path) {
   return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function normalizeNewGithubPath(path) {
+  const normalized = normalizeRepoPath(path);
+
+  if (!normalized) {
+    return "";
+  }
+
+  const fileName = normalized.split("/").pop() || "";
+  return /\.[a-z0-9]+$/i.test(fileName) ? normalized : `${normalized}.md`;
 }
 
 function encodeRepoPath(path) {
