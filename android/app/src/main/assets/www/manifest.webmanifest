@@ -1,0 +1,19 @@
+{
+  "name": "简记 Markdown",
+  "short_name": "简记",
+  "description": "离线 Markdown 写作与预览",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fbfbfa",
+  "theme_color": "#fbfbfa",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

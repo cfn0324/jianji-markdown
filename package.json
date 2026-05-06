@@ -1,0 +1,19 @@
+{
+  "name": "simple-mobile-markdown",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/copy-vendor.mjs",
+    "vendor": "node scripts/copy-vendor.mjs",
+    "serve": "node scripts/serve.mjs",
+    "android:assets": "node scripts/sync-android-assets.mjs",
+    "android:build": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-apk.ps1"
+  },
+  "dependencies": {
+    "katex": "^0.16.22",
+    "markdown-it": "^14.1.0",
+    "markdown-it-texmath": "^1.0.0",
+    "mermaid": "^10.9.3"
+  }
+}
