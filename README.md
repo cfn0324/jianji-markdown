@@ -57,3 +57,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\setup-android-to
 “拉取”会把该路径的文件读入编辑器。“上传”会把当前编辑器内容写回该路径；文件不存在时会创建。
 
 Token 只保存在当前设备本地。这个版本没有后端服务，不做 OAuth 跳转登录。
+
+## 表格编辑
+
+工具栏里的“表”会插入一个 2x2 内容表格。光标放在表格内时，可以使用“行+ / 行- / 列+ / 列-”调整表格。

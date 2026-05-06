@@ -327,6 +327,10 @@ function insertMarkdown(type) {
     mermaid: () => insertBlock("```mermaid\n", "\n```", "graph TD\n  A[开始] --> B[完成]"),
     link: () => wrapSelection("[", "](https://)", "链接"),
     table: insertTable,
+    tableRowAdd: () => editTable("addRow"),
+    tableRowDelete: () => editTable("deleteRow"),
+    tableColAdd: () => editTable("addColumn"),
+    tableColDelete: () => editTable("deleteColumn"),
     hr: () => insertPlain("\n---\n")
   };
 
@@ -374,7 +378,82 @@ function insertBlock(before, after, fallback) {
 }
 
 function insertTable() {
-  insertPlain("\n| 项目 | 内容 |\n| --- | --- |\n|  |  |\n");
+  insertPlain("\n| 列 1 | 列 2 |\n| --- | --- |\n|  |  |\n|  |  |\n");
+}
+
+function editTable(action) {
+  const table = findTableAtCursor();
+
+  if (!table) {
+    showToast("先把光标放在表格内");
+    return;
+  }
+
+  const rows = table.lines.map(parseTableRow);
+  const columnCount = Math.max(...rows.map((row) => row.length));
+  const normalized = rows.map((row) => normalizeCells(row, columnCount));
+  const currentColumn = getTableColumnIndex(table.lines[table.relativeLine], table.relativeColumn, columnCount);
+  let targetRelativeLine = table.relativeLine;
+  let targetColumn = currentColumn;
+  let nextRows = normalized;
+
+  if (action === "addRow") {
+    const insertAt = table.relativeLine <= table.separatorIndex ? table.separatorIndex + 1 : table.relativeLine + 1;
+    nextRows = [
+      ...normalized.slice(0, insertAt),
+      Array(columnCount).fill(""),
+      ...normalized.slice(insertAt)
+    ];
+    targetRelativeLine = insertAt;
+  }
+
+  if (action === "deleteRow") {
+    const bodyIndexes = normalized
+      .map((_, index) => index)
+      .filter((index) => index > table.separatorIndex);
+
+    if (!bodyIndexes.length) {
+      showToast("没有可删除的内容行");
+      return;
+    }
+
+    const deleteAt = table.relativeLine > table.separatorIndex ? table.relativeLine : bodyIndexes[0];
+
+    if (bodyIndexes.length === 1) {
+      nextRows = normalized.map((row, index) => (index === deleteAt ? Array(columnCount).fill("") : row));
+      targetRelativeLine = deleteAt;
+    } else {
+      nextRows = normalized.filter((_, index) => index !== deleteAt);
+      targetRelativeLine = Math.min(deleteAt, nextRows.length - 1);
+    }
+  }
+
+  if (action === "addColumn") {
+    const insertColumnAt = Math.min(currentColumn + 1, columnCount);
+    nextRows = normalized.map((row, rowIndex) => [
+      ...row.slice(0, insertColumnAt),
+      rowIndex === 0 ? `列 ${columnCount + 1}` : "",
+      ...row.slice(insertColumnAt)
+    ]);
+    targetColumn = insertColumnAt;
+  }
+
+  if (action === "deleteColumn") {
+    if (columnCount <= 1) {
+      showToast("至少保留一列");
+      return;
+    }
+
+    nextRows = normalized.map((row) => row.filter((_, index) => index !== currentColumn));
+    targetColumn = Math.max(0, currentColumn - 1);
+  }
+
+  nextRows[table.separatorIndex] = Array(nextRows[0].length).fill("---");
+  const formatted = nextRows.map((row, index) => (
+    index === table.separatorIndex ? formatTableSeparator(row.length) : formatTableRow(row)
+  ));
+
+  replaceTable(table, formatted, targetRelativeLine, targetColumn);
 }
 
 function insertPlain(text) {
@@ -382,6 +461,159 @@ function insertPlain(text) {
   editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, "end");
   editor.selectionStart = editor.selectionEnd = start + text.length;
   focusEditor();
+}
+
+function findTableAtCursor() {
+  const value = editor.value;
+  const lines = value.split("\n");
+  const lineStarts = getLineStarts(value);
+  const cursor = editor.selectionStart;
+  const lineIndex = getLineIndex(lineStarts, cursor);
+
+  if (!isTableLine(lines[lineIndex])) {
+    return null;
+  }
+
+  let start = lineIndex;
+  let end = lineIndex;
+
+  while (start > 0 && isTableLine(lines[start - 1])) {
+    start -= 1;
+  }
+
+  while (end < lines.length - 1 && isTableLine(lines[end + 1])) {
+    end += 1;
+  }
+
+  const block = lines.slice(start, end + 1);
+  const separatorIndex = block.findIndex(isTableSeparator);
+
+  if (separatorIndex < 1) {
+    return null;
+  }
+
+  return {
+    start,
+    end,
+    lines: block,
+    lineStarts,
+    relativeLine: lineIndex - start,
+    relativeColumn: cursor - lineStarts[lineIndex],
+    separatorIndex
+  };
+}
+
+function isTableLine(line) {
+  return line.includes("|") && line.trim().length > 0;
+}
+
+function isTableSeparator(line) {
+  const cells = parseTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function parseTableRow(line) {
+  let text = line.trim();
+
+  if (text.startsWith("|")) {
+    text = text.slice(1);
+  }
+
+  if (text.endsWith("|")) {
+    text = text.slice(0, -1);
+  }
+
+  return text.split("|").map((cell) => cell.trim());
+}
+
+function normalizeCells(cells, count) {
+  const normalized = cells.slice(0, count);
+
+  while (normalized.length < count) {
+    normalized.push("");
+  }
+
+  return normalized;
+}
+
+function formatTableRow(cells) {
+  return `| ${cells.map((cell) => cell.trim()).join(" | ")} |`;
+}
+
+function formatTableSeparator(count) {
+  return `| ${Array(count).fill("---").join(" | ")} |`;
+}
+
+function getTableColumnIndex(line, column, columnCount) {
+  const beforeCursor = line.slice(0, Math.max(0, column));
+  const pipeCount = beforeCursor.split("|").length - 1;
+  const startsWithPipe = line.trimStart().startsWith("|");
+  const index = startsWithPipe ? pipeCount - 1 : pipeCount;
+
+  return Math.max(0, Math.min(columnCount - 1, index));
+}
+
+function replaceTable(table, lines, relativeLine, columnIndex) {
+  const value = editor.value;
+  const startOffset = table.lineStarts[table.start];
+  const endOffset = table.end + 1 < table.lineStarts.length
+    ? table.lineStarts[table.end + 1] - 1
+    : value.length;
+  const nextBlock = lines.join("\n");
+
+  editor.setRangeText(nextBlock, startOffset, endOffset, "end");
+
+  const targetLine = table.start + Math.min(relativeLine, lines.length - 1);
+  const newLineStarts = getLineStarts(editor.value);
+  const targetLineText = editor.value.slice(
+    newLineStarts[targetLine],
+    targetLine + 1 < newLineStarts.length ? newLineStarts[targetLine + 1] - 1 : editor.value.length
+  );
+  const targetOffset = getCellCursorOffset(targetLineText, columnIndex);
+  editor.selectionStart = editor.selectionEnd = newLineStarts[targetLine] + targetOffset;
+  focusEditor();
+}
+
+function getCellCursorOffset(line, columnIndex) {
+  let seen = -1;
+
+  for (let index = 0; index < line.length; index += 1) {
+    if (line[index] === "|") {
+      seen += 1;
+
+      if (seen === columnIndex) {
+        return Math.min(index + 2, line.length);
+      }
+    }
+  }
+
+  return line.length;
+}
+
+function getLineStarts(value) {
+  const starts = [0];
+
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] === "\n") {
+      starts.push(index + 1);
+    }
+  }
+
+  return starts;
+}
+
+function getLineIndex(lineStarts, offset) {
+  let lineIndex = 0;
+
+  for (let index = 0; index < lineStarts.length; index += 1) {
+    if (lineStarts[index] <= offset) {
+      lineIndex = index;
+    } else {
+      break;
+    }
+  }
+
+  return lineIndex;
 }
 
 function transformSelectedLines(transform) {

@@ -398,6 +398,11 @@ body[data-mode="preview"] .md-toolbar {
   color: #8a5a00;
 }
 
+.tool-button.table-tool {
+  flex-basis: 46px;
+  width: 46px;
+}
+
 .tool-separator {
   flex: 0 0 1px;
   width: 1px;
