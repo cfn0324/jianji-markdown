@@ -5,3 +5,6 @@ android/.gradle/
 android/build/
 android/app/build/
 *.apk
+*.aab
+*.jks
+android/release-signing.properties
