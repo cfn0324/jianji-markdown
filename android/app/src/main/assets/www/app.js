@@ -10,6 +10,11 @@ const saveState = document.querySelector("#saveState");
 const toast = document.querySelector("#toast");
 const settingsPanel = document.querySelector("#settingsPanel");
 const settingsBackdrop = document.querySelector("#settingsBackdrop");
+const brandTitle = document.querySelector("#brandTitle");
+const secretBackdrop = document.querySelector("#secretBackdrop");
+const secretInput = document.querySelector("#secretInput");
+const secretNote = document.querySelector("#secretNote");
+const romanceSky = document.querySelector("#romanceSky");
 
 const githubFields = {
   token: document.querySelector("#githubToken"),
@@ -29,10 +34,14 @@ const githubPicker = {
 };
 
 const defaultDraft = "# 未命名\n\n";
+const secretCode = "03241116";
 let toastTimer = 0;
 let renderTimer = 0;
 let saveTimer = 0;
 let githubPickerState = null;
+let secretTapCount = 0;
+let secretTapTimer = 0;
+let romanceTimer = 0;
 
 const md = createMarkdownRenderer();
 
@@ -129,6 +138,18 @@ function bindUI() {
   document.querySelector("[data-action='closeSettings']").addEventListener("click", closeSettings);
   settingsBackdrop.addEventListener("click", closeSettings);
   githubPicker.backdrop.addEventListener("click", cancelGithubPicker);
+  brandTitle.addEventListener("click", handleSecretTap);
+  secretBackdrop.addEventListener("click", (event) => {
+    if (event.target === secretBackdrop) {
+      closeSecretPrompt();
+    }
+  });
+  secretInput.addEventListener("input", handleSecretInput);
+  secretInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeSecretPrompt();
+    }
+  });
 
   document.querySelectorAll("[data-github]").forEach((button) => {
     button.addEventListener("click", () => handleGithubAction(button.dataset.github));
@@ -678,6 +699,124 @@ function closeSettings() {
   settingsPanel.classList.remove("is-open");
   settingsPanel.setAttribute("aria-hidden", "true");
   settingsBackdrop.hidden = true;
+}
+
+function handleSecretTap() {
+  window.clearTimeout(secretTapTimer);
+  secretTapCount += 1;
+  brandTitle.classList.add("is-secret-tapped");
+  window.setTimeout(() => brandTitle.classList.remove("is-secret-tapped"), 120);
+
+  if (secretTapCount >= 9) {
+    secretTapCount = 0;
+    openSecretPrompt();
+    return;
+  }
+
+  secretTapTimer = window.setTimeout(() => {
+    secretTapCount = 0;
+  }, 2600);
+}
+
+function openSecretPrompt() {
+  secretInput.value = "";
+  secretNote.textContent = "藏在时间里的答案。";
+  secretNote.classList.remove("is-error");
+  secretBackdrop.hidden = false;
+  secretBackdrop.classList.add("is-open");
+  window.setTimeout(() => secretInput.focus({ preventScroll: true }), 120);
+}
+
+function closeSecretPrompt() {
+  secretBackdrop.classList.remove("is-open");
+  secretBackdrop.hidden = true;
+  secretInput.blur();
+}
+
+function handleSecretInput() {
+  const normalized = secretInput.value.replace(/\D/g, "").slice(0, secretCode.length);
+
+  if (secretInput.value !== normalized) {
+    secretInput.value = normalized;
+  }
+
+  if (normalized.length < secretCode.length) {
+    secretNote.textContent = "藏在时间里的答案。";
+    secretNote.classList.remove("is-error");
+    return;
+  }
+
+  if (normalized === secretCode) {
+    closeSecretPrompt();
+    launchRomance();
+    return;
+  }
+
+  secretInput.value = "";
+  secretNote.textContent = "暗号不对，再试一次。";
+  secretNote.classList.add("is-error");
+  secretInput.classList.remove("is-shaking");
+  void secretInput.offsetWidth;
+  secretInput.classList.add("is-shaking");
+}
+
+function launchRomance() {
+  window.clearTimeout(romanceTimer);
+  romanceSky.hidden = false;
+  romanceSky.classList.add("is-active");
+  romanceSky.querySelectorAll(".romance-effect").forEach((node) => node.remove());
+
+  createFireworkBurst(50, 30, 338, 0);
+  createFireworkBurst(24, 39, 14, 0.18);
+  createFireworkBurst(76, 37, 188, 0.3);
+  createFireworkBurst(42, 58, 306, 0.55);
+  createFireworkBurst(62, 56, 38, 0.68);
+  createHeartRain();
+
+  romanceTimer = window.setTimeout(() => {
+    romanceSky.classList.remove("is-active");
+    window.setTimeout(() => {
+      romanceSky.hidden = true;
+      romanceSky.querySelectorAll(".romance-effect").forEach((node) => node.remove());
+    }, 700);
+  }, 8600);
+}
+
+function createFireworkBurst(left, top, hue, delay) {
+  const particles = 28;
+
+  for (let index = 0; index < particles; index += 1) {
+    const particle = document.createElement("span");
+    const angle = (360 / particles) * index;
+    const distance = 52 + Math.random() * 58;
+
+    particle.className = "romance-effect firework-particle";
+    particle.style.setProperty("--left", `${left}%`);
+    particle.style.setProperty("--top", `${top}%`);
+    particle.style.setProperty("--angle", `${angle}deg`);
+    particle.style.setProperty("--distance", `${distance}px`);
+    particle.style.setProperty("--delay", `${delay + Math.random() * 0.16}s`);
+    particle.style.setProperty("--hue", String(hue + Math.random() * 24 - 12));
+    romanceSky.append(particle);
+  }
+}
+
+function createHeartRain() {
+  const hearts = 34;
+
+  for (let index = 0; index < hearts; index += 1) {
+    const heart = document.createElement("span");
+    const size = 10 + Math.random() * 16;
+
+    heart.className = "romance-effect floating-heart";
+    heart.style.setProperty("--left", `${8 + Math.random() * 84}%`);
+    heart.style.setProperty("--top", `${58 + Math.random() * 32}%`);
+    heart.style.setProperty("--size", `${size}px`);
+    heart.style.setProperty("--delay", `${Math.random() * 3.6}s`);
+    heart.style.setProperty("--drift", `${-34 + Math.random() * 68}px`);
+    heart.style.setProperty("--duration", `${4.8 + Math.random() * 2.8}s`);
+    romanceSky.append(heart);
+  }
 }
 
 async function handleGithubAction(action) {

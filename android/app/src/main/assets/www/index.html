@@ -19,7 +19,7 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="brand" aria-label="简记 Markdown">
-          <span class="brand-title">简记</span>
+          <span class="brand-title" id="brandTitle">简记</span>
           <span class="save-state" id="saveState">已保存</span>
         </div>
 
@@ -238,6 +238,27 @@
 
       <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div class="secret-backdrop" id="secretBackdrop" hidden>
+        <section class="secret-card" role="dialog" aria-modal="true" aria-labelledby="secretTitle">
+          <p class="secret-kicker">Secret</p>
+          <h2 id="secretTitle">输入暗号</h2>
+          <input id="secretInput" class="secret-input" type="password" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="暗号">
+          <p class="secret-note" id="secretNote">藏在时间里的答案。</p>
+        </section>
+      </div>
+
+      <div class="romance-sky" id="romanceSky" hidden aria-hidden="true">
+        <div class="romance-glow"></div>
+        <div class="romance-message">
+          <div class="romance-names">
+            <span>cfn</span>
+            <span class="romance-heart" aria-label="爱心">♥</span>
+            <span>jjy</span>
+          </div>
+          <strong>把每一次心动，都写进星光里</strong>
+        </div>
+      </div>
     </div>
 
     <script src="./vendor/markdown-it/markdown-it.min.js"></script>
