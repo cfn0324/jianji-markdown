@@ -15,6 +15,7 @@ const secretBackdrop = document.querySelector("#secretBackdrop");
 const secretInput = document.querySelector("#secretInput");
 const secretNote = document.querySelector("#secretNote");
 const romanceSky = document.querySelector("#romanceSky");
+const romanceAudio = document.querySelector("#romanceAudio");
 
 const githubFields = {
   token: document.querySelector("#githubToken"),
@@ -42,6 +43,8 @@ let githubPickerState = null;
 let secretTapCount = 0;
 let secretTapTimer = 0;
 let romanceTimer = 0;
+let romanceCloseTimer = 0;
+let romanceEffectTimer = 0;
 let nativeKeyboardInset = 0;
 let visualKeyboardInset = 0;
 
@@ -152,6 +155,7 @@ function bindUI() {
       closeSecretPrompt();
     }
   });
+  romanceSky.addEventListener("pointerdown", closeRomance);
 
   document.querySelectorAll("[data-github]").forEach((button) => {
     button.addEventListener("click", () => handleGithubAction(button.dataset.github));
@@ -193,10 +197,11 @@ function bindKeyboardOffset() {
     return;
   }
 
+  const baseViewportHeight = window.innerHeight;
   const sync = () => {
     const viewport = window.visualViewport;
-    visualKeyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-    document.documentElement.style.setProperty("--app-height", `${Math.round(viewport.height)}px`);
+    const visualInset = baseViewportHeight - viewport.height - Math.max(0, viewport.offsetTop);
+    visualKeyboardInset = visualInset > 80 ? visualInset : 0;
     syncKeyboardInset();
   };
 
@@ -209,12 +214,13 @@ function bindKeyboardOffset() {
 function setNativeInsets(payload) {
   const next = payload && typeof payload === "object" ? payload : {};
   nativeKeyboardInset = Math.max(0, Number(next.keyboard || 0));
+  const hasKeyboard = Math.max(nativeKeyboardInset, visualKeyboardInset) > 0;
 
-  if (Number.isFinite(Number(next.top))) {
+  if (!hasKeyboard && Number.isFinite(Number(next.top))) {
     document.documentElement.style.setProperty("--safe-top", `${Math.max(0, Number(next.top))}px`);
   }
 
-  if (Number.isFinite(Number(next.bottom))) {
+  if (!hasKeyboard && Number.isFinite(Number(next.bottom))) {
     document.documentElement.style.setProperty("--safe-bottom", `${Math.max(0, Number(next.bottom))}px`);
   }
 
@@ -791,24 +797,75 @@ function handleSecretInput() {
 
 function launchRomance() {
   window.clearTimeout(romanceTimer);
+  window.clearTimeout(romanceCloseTimer);
+  window.clearTimeout(romanceEffectTimer);
   romanceSky.hidden = false;
+  romanceSky.setAttribute("aria-hidden", "false");
   romanceSky.classList.add("is-active");
   romanceSky.querySelectorAll(".romance-effect").forEach((node) => node.remove());
 
+  playRomanceMusic();
+  createRomanceScene();
+  scheduleRomanceEffects(0);
+
+  romanceTimer = window.setTimeout(closeRomance, 45000);
+}
+
+function closeRomance() {
+  window.clearTimeout(romanceTimer);
+  window.clearTimeout(romanceCloseTimer);
+  window.clearTimeout(romanceEffectTimer);
+  stopRomanceMusic();
+  romanceSky.classList.remove("is-active");
+  romanceSky.setAttribute("aria-hidden", "true");
+
+  romanceCloseTimer = window.setTimeout(() => {
+    romanceSky.hidden = true;
+    romanceSky.querySelectorAll(".romance-effect").forEach((node) => node.remove());
+  }, 700);
+}
+
+function playRomanceMusic() {
+  if (!romanceAudio) {
+    return;
+  }
+
+  romanceAudio.volume = 0.78;
+  romanceAudio.currentTime = 0;
+  const playPromise = romanceAudio.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {});
+  }
+}
+
+function stopRomanceMusic() {
+  if (!romanceAudio) {
+    return;
+  }
+
+  romanceAudio.pause();
+  romanceAudio.currentTime = 0;
+}
+
+function scheduleRomanceEffects(step) {
+  if (step >= 9 || romanceSky.hidden) {
+    return;
+  }
+
+  romanceEffectTimer = window.setTimeout(() => {
+    createRomanceScene();
+    scheduleRomanceEffects(step + 1);
+  }, step === 0 ? 4200 : 4600);
+}
+
+function createRomanceScene() {
   createFireworkBurst(50, 30, 338, 0);
   createFireworkBurst(24, 39, 14, 0.18);
   createFireworkBurst(76, 37, 188, 0.3);
   createFireworkBurst(42, 58, 306, 0.55);
   createFireworkBurst(62, 56, 38, 0.68);
   createHeartRain();
-
-  romanceTimer = window.setTimeout(() => {
-    romanceSky.classList.remove("is-active");
-    window.setTimeout(() => {
-      romanceSky.hidden = true;
-      romanceSky.querySelectorAll(".romance-effect").forEach((node) => node.remove());
-    }, 700);
-  }, 8600);
 }
 
 function createFireworkBurst(left, top, hue, delay) {

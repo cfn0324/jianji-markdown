@@ -4,12 +4,15 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.graphics.Insets;
+import android.view.WindowInsets;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -43,7 +46,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
 
         webView = new WebView(this);
         webView.setFitsSystemWindows(false);
@@ -96,10 +99,7 @@ public class MainActivity extends Activity {
 
     private void bindInsets() {
         webView.setOnApplyWindowInsetsListener((view, insets) -> {
-            int top = getSystemWindowInsetTop(insets);
-            int bottom = getSystemWindowInsetBottom(insets);
-            int keyboard = getKeyboardInset(insets);
-            notifyInsets(top, bottom, keyboard);
+            notifyInsets(insets);
             return insets;
         });
 
@@ -109,16 +109,32 @@ public class MainActivity extends Activity {
             }
 
             WindowInsets insets = webView.getRootWindowInsets();
-            notifyInsets(getSystemWindowInsetTop(insets), getSystemWindowInsetBottom(insets), getKeyboardInset(insets));
+            notifyInsets(insets);
         });
     }
 
     private int getSystemWindowInsetTop(WindowInsets insets) {
-        return insets == null ? 0 : insets.getSystemWindowInsetTop();
+        if (insets == null) {
+            return 0;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return insets.getInsets(WindowInsets.Type.statusBars()).top;
+        }
+
+        return insets.getSystemWindowInsetTop();
     }
 
     private int getSystemWindowInsetBottom(WindowInsets insets) {
-        return insets == null ? 0 : insets.getSystemWindowInsetBottom();
+        if (insets == null) {
+            return 0;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
+        }
+
+        return insets.getStableInsetBottom();
     }
 
     private int getKeyboardInset(WindowInsets insets) {
@@ -126,9 +142,39 @@ public class MainActivity extends Activity {
             return 0;
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets imeInsets = insets.getInsets(WindowInsets.Type.ime());
+            Insets navigationInsets = insets.getInsets(WindowInsets.Type.navigationBars());
+            return Math.max(0, imeInsets.bottom - navigationInsets.bottom);
+        }
+
         int systemBottom = insets.getSystemWindowInsetBottom();
         int stableBottom = insets.getStableInsetBottom();
         return Math.max(0, systemBottom - stableBottom);
+    }
+
+    private void notifyInsets(WindowInsets insets) {
+        int top = getSystemWindowInsetTop(insets);
+        int bottom = getSystemWindowInsetBottom(insets);
+        int keyboard = Math.max(getKeyboardInset(insets), getKeyboardInsetFromVisibleFrame(bottom));
+        notifyInsets(top, bottom, keyboard);
+    }
+
+    private int getKeyboardInsetFromVisibleFrame(int bottomInset) {
+        if (webView == null || webView.getRootView() == null) {
+            return 0;
+        }
+
+        Rect visibleFrame = new Rect();
+        webView.getWindowVisibleDisplayFrame(visibleFrame);
+        int rootHeight = webView.getRootView().getHeight();
+
+        if (rootHeight <= 0 || visibleFrame.bottom <= 0) {
+            return 0;
+        }
+
+        int hiddenBottom = Math.max(0, rootHeight - visibleFrame.bottom);
+        return Math.max(0, hiddenBottom - bottomInset);
     }
 
     private void notifyInsets(int top, int bottom, int keyboard) {
