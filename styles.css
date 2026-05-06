@@ -156,13 +156,18 @@ button {
 }
 
 .tool-icon {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.8;
+  stroke-width: 1.65;
+}
+
+.table-tool .tool-icon {
+  width: 21px;
+  height: 21px;
 }
 
 .icon-button:active,
@@ -439,30 +444,39 @@ body[data-mode="preview"] .md-toolbar {
 
 .toast {
   position: fixed;
-  right: 16px;
-  bottom: calc(70px + env(safe-area-inset-bottom) + var(--keyboard-inset));
-  z-index: 60;
-  max-width: min(280px, calc(100vw - 32px));
-  transform: translateY(12px);
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 120;
+  max-width: min(320px, calc(100vw - 32px));
+  transform: translate(-50%, -10px);
   border: 1px solid rgba(23, 23, 23, 0.08);
   border-radius: 8px;
   background: rgba(23, 23, 23, 0.86);
   color: #ffffff;
   font-size: 13px;
+  font-weight: 680;
   opacity: 0;
-  padding: 9px 11px;
+  padding: 9px 12px;
   pointer-events: none;
+  text-align: center;
   transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
 }
 
 .toast.is-visible {
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   opacity: 1;
 }
 
 .toast.is-success {
   border-color: rgba(15, 118, 110, 0.18);
   background: #0f766e;
+  color: #ffffff;
+}
+
+.toast.is-error {
+  border-color: rgba(185, 28, 28, 0.18);
+  background: #b91c1c;
   color: #ffffff;
 }
 

@@ -235,7 +235,7 @@ async function renderNow() {
     await window.mermaid.run({ nodes: diagrams });
   } catch (error) {
     console.warn(error);
-    showToast("Mermaid 渲染失败");
+    showToast("Mermaid 渲染失败", "error");
   }
 }
 
@@ -284,11 +284,11 @@ function receiveDocument(content, name) {
   renderNow();
   setView("edit");
   focusEditor();
-  showToast(`${name || "文档"}已打开`);
+  showToast(`${name || "文档"}已打开`, "success");
 }
 
 function receiveNativeSaveResult(success, message) {
-  showToast(message || (success ? "已导出" : "导出失败"));
+  showToast(message || (success ? "已导出" : "导出失败"), success ? "success" : "error");
 }
 
 async function exportDocument() {
@@ -321,7 +321,7 @@ async function exportDocument() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  showToast("已导出");
+  showToast("已导出", "success");
 }
 
 function getDocumentTitle() {
@@ -412,7 +412,7 @@ function editTable(action) {
   const table = findTableAtCursor();
 
   if (!table) {
-    showToast("先把光标放在表格内");
+    showToast("先把光标放在表格内", "error");
     return;
   }
 
@@ -440,7 +440,7 @@ function editTable(action) {
       .filter((index) => index > table.separatorIndex);
 
     if (!bodyIndexes.length) {
-      showToast("没有可删除的内容行");
+      showToast("没有可删除的内容行", "error");
       return;
     }
 
@@ -467,7 +467,7 @@ function editTable(action) {
 
   if (action === "deleteColumn") {
     if (columnCount <= 1) {
-      showToast("至少保留一列");
+      showToast("至少保留一列", "error");
       return;
     }
 
@@ -696,7 +696,7 @@ async function handleGithubAction(action) {
     }
   } catch (error) {
     console.error(error);
-    showToast(error.message || "GitHub 操作失败");
+    showToast(error.message || "GitHub 操作失败", "error");
   }
 }
 
@@ -856,7 +856,7 @@ async function refreshGithubFileListForConfig(config) {
   config.files = files;
   localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
   populateFileList(files, config.path);
-  showToast(files.length ? "文件列表已更新" : "没有找到 Markdown 文件");
+  showToast(files.length ? "文件列表已更新" : "没有找到 Markdown 文件", files.length ? "success" : "error");
   return files;
 }
 
@@ -920,7 +920,7 @@ function confirmGithubPicker() {
   const path = newPath || selectedPath;
 
   if (!path) {
-    showToast(mode === "push" ? "请选择文件或输入新文件名" : "请选择要拉取的文件");
+    showToast(mode === "push" ? "请选择文件或输入新文件名" : "请选择要拉取的文件", "error");
     return;
   }
 
@@ -1133,10 +1133,12 @@ function showToast(message, tone = "") {
   window.clearTimeout(toastTimer);
   toast.textContent = message;
   toast.classList.toggle("is-success", tone === "success");
+  toast.classList.toggle("is-error", tone === "error");
   toast.classList.add("is-visible");
   toastTimer = window.setTimeout(() => {
     toast.classList.remove("is-visible");
     toast.classList.remove("is-success");
+    toast.classList.remove("is-error");
   }, 1800);
 }
 
