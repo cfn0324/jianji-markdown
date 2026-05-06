@@ -1,5 +1,6 @@
 const STORAGE_KEY = "simple-mobile-markdown:draft:v1";
 const VIEW_KEY = "simple-mobile-markdown:view:v1";
+const GITHUB_CONFIG_KEY = "simple-mobile-markdown:github:v1";
 
 const editor = document.querySelector("#editor");
 const preview = document.querySelector("#preview");
@@ -7,6 +8,16 @@ const workspace = document.querySelector("#workspace");
 const fileInput = document.querySelector("#fileInput");
 const saveState = document.querySelector("#saveState");
 const toast = document.querySelector("#toast");
+const settingsPanel = document.querySelector("#settingsPanel");
+const settingsBackdrop = document.querySelector("#settingsBackdrop");
+
+const githubFields = {
+  token: document.querySelector("#githubToken"),
+  owner: document.querySelector("#githubOwner"),
+  repo: document.querySelector("#githubRepo"),
+  branch: document.querySelector("#githubBranch"),
+  path: document.querySelector("#githubPath")
+};
 
 const defaultDraft = "# 未命名\n\n";
 let toastTimer = 0;
@@ -14,6 +25,9 @@ let renderTimer = 0;
 let saveTimer = 0;
 
 const md = createMarkdownRenderer();
+
+window.receiveNativeMarkdown = receiveNativeMarkdown;
+window.receiveNativeSaveResult = receiveNativeSaveResult;
 
 init();
 
@@ -99,8 +113,15 @@ function bindUI() {
   });
 
   document.querySelector("[data-action='new']").addEventListener("click", newDocument);
-  document.querySelector("[data-action='open']").addEventListener("click", () => fileInput.click());
+  document.querySelector("[data-action='open']").addEventListener("click", openDocument);
   document.querySelector("[data-action='save']").addEventListener("click", exportDocument);
+  document.querySelector("[data-action='settings']").addEventListener("click", openSettings);
+  document.querySelector("[data-action='closeSettings']").addEventListener("click", closeSettings);
+  settingsBackdrop.addEventListener("click", closeSettings);
+
+  document.querySelectorAll("[data-github]").forEach((button) => {
+    button.addEventListener("click", () => handleGithubAction(button.dataset.github));
+  });
 
   fileInput.addEventListener("change", importDocument);
 
@@ -207,24 +228,51 @@ function newDocument() {
   focusEditor();
 }
 
+function openDocument() {
+  if (hasNativeBridge()) {
+    window.NativeMarkdown.openMarkdown();
+    return;
+  }
+
+  fileInput.click();
+}
+
 async function importDocument() {
   const file = fileInput.files?.[0];
   if (!file) {
     return;
   }
 
-  editor.value = await file.text();
+  receiveDocument(await file.text(), file.name);
   fileInput.value = "";
+}
+
+function receiveNativeMarkdown(name, content) {
+  receiveDocument(String(content || ""), name || "文档");
+}
+
+function receiveDocument(content, name) {
+  editor.value = content;
   saveDraft();
   renderNow();
   setView("edit");
   focusEditor();
-  showToast("已打开");
+  showToast(`${name || "文档"}已打开`);
+}
+
+function receiveNativeSaveResult(success, message) {
+  showToast(message || (success ? "已导出" : "导出失败"));
 }
 
 async function exportDocument() {
   saveDraft();
   const fileName = `${getDocumentTitle()}.md`;
+
+  if (hasNativeBridge()) {
+    window.NativeMarkdown.saveMarkdown(fileName, editor.value);
+    return;
+  }
+
   const file = new File([editor.value], fileName, { type: "text/markdown;charset=utf-8" });
 
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
@@ -356,6 +404,182 @@ function togglePrefix(line, prefix) {
   return line.startsWith(prefix) ? line.slice(prefix.length) : `${prefix}${line}`;
 }
 
+function openSettings() {
+  const config = readGithubConfig();
+  githubFields.token.value = config.token || "";
+  githubFields.owner.value = config.owner || "cfn0324";
+  githubFields.repo.value = config.repo || "jianji-markdown";
+  githubFields.branch.value = config.branch || "main";
+  githubFields.path.value = config.path || `${getDocumentTitle()}.md`;
+  settingsBackdrop.hidden = false;
+  settingsPanel.classList.add("is-open");
+  settingsPanel.setAttribute("aria-hidden", "false");
+}
+
+function closeSettings() {
+  settingsPanel.classList.remove("is-open");
+  settingsPanel.setAttribute("aria-hidden", "true");
+  settingsBackdrop.hidden = true;
+}
+
+async function handleGithubAction(action) {
+  if (action === "save") {
+    saveGithubConfigFromFields();
+    showToast("云端配置已保存");
+    return;
+  }
+
+  try {
+    if (action === "pull") {
+      await pullFromGithub();
+    }
+
+    if (action === "push") {
+      await pushToGithub();
+    }
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "GitHub 操作失败");
+  }
+}
+
+function readGithubConfig() {
+  try {
+    return JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveGithubConfigFromFields() {
+  const config = {
+    token: githubFields.token.value.trim(),
+    owner: githubFields.owner.value.trim(),
+    repo: githubFields.repo.value.trim(),
+    branch: githubFields.branch.value.trim() || "main",
+    path: normalizeRepoPath(githubFields.path.value)
+  };
+
+  localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
+  return config;
+}
+
+function validateGithubConfig(config) {
+  if (!config.owner || !config.repo || !config.path) {
+    throw new Error("请填写 Owner、Repo 和文件路径");
+  }
+
+  if (!config.token) {
+    throw new Error("请填写 GitHub Token");
+  }
+}
+
+async function pullFromGithub() {
+  const config = saveGithubConfigFromFields();
+  validateGithubConfig(config);
+  showToast("正在拉取");
+
+  const file = await getGithubFile(config);
+  const content = await decodeBase64(file.content || "");
+  receiveDocument(content, config.path);
+  showToast("已从 GitHub 拉取");
+}
+
+async function pushToGithub() {
+  const config = saveGithubConfigFromFields();
+  validateGithubConfig(config);
+  saveDraft();
+  showToast("正在上传");
+
+  let sha = null;
+  try {
+    const existing = await getGithubFile(config);
+    sha = existing.sha;
+  } catch (error) {
+    if (!String(error.message).includes("404")) {
+      throw error;
+    }
+  }
+
+  const body = {
+    message: `${sha ? "Update" : "Create"} ${config.path}`,
+    content: await encodeBase64(editor.value),
+    branch: config.branch
+  };
+
+  if (sha) {
+    body.sha = sha;
+  }
+
+  await githubRequest(config, {
+    method: "PUT",
+    body: JSON.stringify(body)
+  });
+  showToast("已上传到 GitHub");
+}
+
+async function getGithubFile(config) {
+  return githubRequest(config, { method: "GET" });
+}
+
+async function githubRequest(config, options) {
+  const path = encodeRepoPath(config.path);
+  const branch = encodeURIComponent(config.branch || "main");
+  const url = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${path}${options.method === "GET" ? `?ref=${branch}` : ""}`;
+  const response = await fetch(url, {
+    method: options.method,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": `Bearer ${config.token}`,
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    },
+    body: options.body
+  });
+
+  if (!response.ok) {
+    let message = `GitHub ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.message ? `${message}: ${payload.message}` : message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
+function normalizeRepoPath(path) {
+  return path.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function encodeRepoPath(path) {
+  return normalizeRepoPath(path).split("/").map(encodeURIComponent).join("/");
+}
+
+async function decodeBase64(base64) {
+  const clean = base64.replace(/\s/g, "");
+  const response = await fetch(`data:application/octet-stream;base64,${clean}`);
+  const buffer = await response.arrayBuffer();
+  return new TextDecoder("utf-8").decode(buffer);
+}
+
+async function encodeBase64(value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+function hasNativeBridge() {
+  return Boolean(window.NativeMarkdown);
+}
+
 function focusEditor() {
   editor.focus({ preventScroll: true });
 }
@@ -366,7 +590,7 @@ function showToast(message) {
   toast.classList.add("is-visible");
   toastTimer = window.setTimeout(() => {
     toast.classList.remove("is-visible");
-  }, 1600);
+  }, 1800);
 }
 
 function escapeHtml(value) {

@@ -31,8 +31,9 @@
 
         <div class="top-actions">
           <button class="icon-button" type="button" data-action="new" aria-label="新建" title="新建">+</button>
-          <button class="icon-button" type="button" data-action="open" aria-label="打开文件" title="打开">↥</button>
-          <button class="icon-button" type="button" data-action="save" aria-label="导出文件" title="导出">↧</button>
+          <button class="icon-button" type="button" data-action="open" aria-label="导入" title="导入">入</button>
+          <button class="icon-button" type="button" data-action="save" aria-label="导出" title="导出">出</button>
+          <button class="icon-button" type="button" data-action="settings" aria-label="云端设置" title="云端">云</button>
         </div>
       </header>
 
@@ -61,11 +62,11 @@
           <span class="tool-separator" aria-hidden="true"></span>
           <button class="tool-button strong" type="button" data-insert="bold" aria-label="加粗" title="加粗">B</button>
           <button class="tool-button italic" type="button" data-insert="italic" aria-label="斜体" title="斜体">I</button>
-          <button class="tool-button" type="button" data-insert="quote" aria-label="引用" title="引用">”</button>
+          <button class="tool-button" type="button" data-insert="quote" aria-label="引用" title="引用">引</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button" type="button" data-insert="list" aria-label="列表" title="列表">•</button>
-          <button class="tool-button" type="button" data-insert="task" aria-label="任务" title="任务">☑</button>
-          <button class="tool-button" type="button" data-insert="table" aria-label="表格" title="表格">▦</button>
+          <button class="tool-button" type="button" data-insert="list" aria-label="列表" title="列表">列</button>
+          <button class="tool-button" type="button" data-insert="task" aria-label="任务" title="任务">任</button>
+          <button class="tool-button" type="button" data-insert="table" aria-label="表格" title="表格">表</button>
           <span class="tool-separator" aria-hidden="true"></span>
           <button class="tool-button mono" type="button" data-insert="inlineCode" aria-label="行内代码" title="行内代码">`</button>
           <button class="tool-button mono" type="button" data-insert="codeBlock" aria-label="代码块" title="代码块">```</button>
@@ -73,10 +74,53 @@
           <button class="tool-button math" type="button" data-insert="mathBlock" aria-label="公式块" title="公式块">$$</button>
           <button class="tool-button" type="button" data-insert="mermaid" aria-label="Mermaid 图" title="Mermaid 图">MM</button>
           <span class="tool-separator" aria-hidden="true"></span>
-          <button class="tool-button" type="button" data-insert="link" aria-label="链接" title="链接">↗</button>
-          <button class="tool-button" type="button" data-insert="hr" aria-label="分隔线" title="分隔线">—</button>
+          <button class="tool-button" type="button" data-insert="link" aria-label="链接" title="链接">链</button>
+          <button class="tool-button" type="button" data-insert="hr" aria-label="分隔线" title="分隔线">线</button>
         </div>
       </footer>
+
+      <div class="settings-backdrop" id="settingsBackdrop" hidden></div>
+      <section class="settings-panel" id="settingsPanel" aria-hidden="true" aria-label="GitHub 云端设置">
+        <header class="settings-header">
+          <h2>GitHub</h2>
+          <button class="text-button" type="button" data-action="closeSettings">关闭</button>
+        </header>
+
+        <form class="settings-form" id="githubForm">
+          <label class="field">
+            <span>Token</span>
+            <input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_...">
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Owner</span>
+              <input id="githubOwner" type="text" autocapitalize="off" autocomplete="off" placeholder="cfn0324">
+            </label>
+            <label class="field">
+              <span>Repo</span>
+              <input id="githubRepo" type="text" autocapitalize="off" autocomplete="off" placeholder="jianji-markdown">
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field small">
+              <span>Branch</span>
+              <input id="githubBranch" type="text" autocapitalize="off" autocomplete="off" placeholder="main">
+            </label>
+            <label class="field">
+              <span>File path</span>
+              <input id="githubPath" type="text" autocapitalize="off" autocomplete="off" placeholder="notes/today.md">
+            </label>
+          </div>
+
+          <div class="cloud-actions">
+            <button class="primary-button" type="button" data-github="pull">拉取</button>
+            <button class="primary-button" type="button" data-github="push">上传</button>
+            <button class="secondary-button" type="button" data-github="save">保存配置</button>
+          </div>
+
+          <p class="settings-note">Token 只保存在本机，需要仓库 Contents 读写权限。</p>
+        </form>
+      </section>
 
       <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
