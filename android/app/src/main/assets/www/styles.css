@@ -31,7 +31,9 @@ body {
 }
 
 button,
-textarea {
+textarea,
+select,
+input {
   font: inherit;
 }
 
@@ -500,7 +502,8 @@ body[data-mode="preview"] .md-toolbar {
   font-weight: 680;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-width: 0;
   height: 42px;
@@ -514,14 +517,15 @@ body[data-mode="preview"] .md-toolbar {
   padding: 0 11px;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   border-color: var(--accent);
   background: #ffffff;
 }
 
 .cloud-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 8px;
 }
 
@@ -609,7 +613,7 @@ body[data-mode="preview"] .md-toolbar {
 
   .cloud-actions,
   .field-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }
 

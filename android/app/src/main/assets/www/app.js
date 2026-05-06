@@ -13,9 +13,8 @@ const settingsBackdrop = document.querySelector("#settingsBackdrop");
 
 const githubFields = {
   token: document.querySelector("#githubToken"),
-  owner: document.querySelector("#githubOwner"),
-  repo: document.querySelector("#githubRepo"),
-  branch: document.querySelector("#githubBranch"),
+  url: document.querySelector("#githubUrl"),
+  fileList: document.querySelector("#githubFileList"),
   path: document.querySelector("#githubPath")
 };
 
@@ -121,6 +120,11 @@ function bindUI() {
 
   document.querySelectorAll("[data-github]").forEach((button) => {
     button.addEventListener("click", () => handleGithubAction(button.dataset.github));
+  });
+  githubFields.fileList.addEventListener("change", () => {
+    if (githubFields.fileList.value) {
+      githubFields.path.value = githubFields.fileList.value;
+    }
   });
 
   fileInput.addEventListener("change", importDocument);
@@ -639,10 +643,9 @@ function togglePrefix(line, prefix) {
 function openSettings() {
   const config = readGithubConfig();
   githubFields.token.value = config.token || "";
-  githubFields.owner.value = config.owner || "cfn0324";
-  githubFields.repo.value = config.repo || "jianji-markdown";
-  githubFields.branch.value = config.branch || "main";
+  githubFields.url.value = config.url || buildGithubRepoUrl(config) || "https://github.com/cfn0324/jianji-markdown";
   githubFields.path.value = config.path || `${getDocumentTitle()}.md`;
+  populateFileList(config.files || [], config.path || "");
   settingsBackdrop.hidden = false;
   settingsPanel.classList.add("is-open");
   settingsPanel.setAttribute("aria-hidden", "false");
@@ -656,12 +659,16 @@ function closeSettings() {
 
 async function handleGithubAction(action) {
   if (action === "save") {
-    saveGithubConfigFromFields();
-    showToast("云端配置已保存");
+    await saveGithubConfigAndRefresh();
     return;
   }
 
   try {
+    if (action === "refresh") {
+      await refreshGithubFileList();
+      return;
+    }
+
     if (action === "pull") {
       await pullFromGithub();
     }
@@ -677,37 +684,54 @@ async function handleGithubAction(action) {
 
 function readGithubConfig() {
   try {
-    return JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY) || "{}");
+    const config = JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY) || "{}");
+
+    if (!config.url && config.owner && config.repo) {
+      config.url = buildGithubRepoUrl(config);
+    }
+
+    return config;
   } catch {
     return {};
   }
 }
 
 function saveGithubConfigFromFields() {
+  const previous = readGithubConfig();
+  const parsed = parseGithubUrl(githubFields.url.value);
   const config = {
     token: githubFields.token.value.trim(),
-    owner: githubFields.owner.value.trim(),
-    repo: githubFields.repo.value.trim(),
-    branch: githubFields.branch.value.trim() || "main",
-    path: normalizeRepoPath(githubFields.path.value)
+    url: parsed.url,
+    owner: parsed.owner,
+    repo: parsed.repo,
+    branch: parsed.branch || previous.branch || "main",
+    branchFromUrl: Boolean(parsed.branch),
+    path: normalizeRepoPath(githubFields.path.value || parsed.path || previous.path || `${getDocumentTitle()}.md`),
+    files: previous.files || []
   };
+
+  if (parsed.path && (!githubFields.path.value.trim() || githubFields.path.value.trim() === previous.path)) {
+    config.path = parsed.path;
+    githubFields.path.value = parsed.path;
+  }
 
   localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
   return config;
 }
 
-function validateGithubConfig(config) {
+function validateGithubConfig(config, requiresWrite = false) {
   if (!config.owner || !config.repo || !config.path) {
-    throw new Error("请填写 Owner、Repo 和文件路径");
+    throw new Error("请填写 GitHub 地址和文件路径");
   }
 
-  if (!config.token) {
-    throw new Error("请填写 GitHub Token");
+  if (requiresWrite && !config.token) {
+    throw new Error("上传需要填写 GitHub Token");
   }
 }
 
 async function pullFromGithub() {
-  const config = saveGithubConfigFromFields();
+  let config = saveGithubConfigFromFields();
+  config = await ensureDefaultBranch(config);
   validateGithubConfig(config);
   showToast("正在拉取");
 
@@ -718,8 +742,9 @@ async function pullFromGithub() {
 }
 
 async function pushToGithub() {
-  const config = saveGithubConfigFromFields();
-  validateGithubConfig(config);
+  let config = saveGithubConfigFromFields();
+  config = await ensureDefaultBranch(config);
+  validateGithubConfig(config, true);
   saveDraft();
   showToast("正在上传");
 
@@ -754,18 +779,79 @@ async function getGithubFile(config) {
   return githubRequest(config, { method: "GET" });
 }
 
+async function saveGithubConfigAndRefresh() {
+  try {
+    saveGithubConfigFromFields();
+    await refreshGithubFileList();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "云端配置保存失败");
+  }
+}
+
+async function refreshGithubFileList() {
+  let config = saveGithubConfigFromFields();
+
+  if (!config.owner || !config.repo) {
+    throw new Error("请填写 GitHub 仓库地址");
+  }
+
+  showToast("正在读取文件列表");
+  config = await ensureDefaultBranch(config);
+  const files = await listGithubFiles(config);
+  config.files = files;
+  localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
+  populateFileList(files, config.path);
+  showToast(files.length ? "文件列表已更新" : "没有找到 Markdown 文件");
+}
+
+async function listGithubFiles(config) {
+  const branch = encodeURIComponent(config.branch || "main");
+  const url = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/git/trees/${branch}?recursive=1`;
+  const payload = await githubFetch(config, url, { method: "GET" });
+  const blobs = (payload.tree || [])
+    .filter((item) => item.type === "blob")
+    .map((item) => item.path)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+  const markdownFiles = blobs.filter((path) => /\.(md|markdown|mdown|txt)$/i.test(path));
+
+  return markdownFiles.length ? markdownFiles : blobs;
+}
+
+async function ensureDefaultBranch(config) {
+  if (config.branchFromUrl && config.branch) {
+    return config;
+  }
+
+  const url = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`;
+  const repo = await githubFetch(config, url, { method: "GET" });
+  config.branch = repo.default_branch || config.branch || "main";
+  localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
+  return config;
+}
+
 async function githubRequest(config, options) {
   const path = encodeRepoPath(config.path);
   const branch = encodeURIComponent(config.branch || "main");
   const url = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${path}${options.method === "GET" ? `?ref=${branch}` : ""}`;
+  return githubFetch(config, url, options);
+}
+
+async function githubFetch(config, url, options) {
+  const headers = {
+    "Accept": "application/vnd.github+json",
+    "Content-Type": "application/json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+
+  if (config.token) {
+    headers.Authorization = `Bearer ${config.token}`;
+  }
+
   const response = await fetch(url, {
     method: options.method,
-    headers: {
-      "Accept": "application/vnd.github+json",
-      "Authorization": `Bearer ${config.token}`,
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    },
+    headers,
     body: options.body
   });
 
@@ -779,6 +865,83 @@ async function githubRequest(config, options) {
   }
 
   return response.json();
+}
+
+function parseGithubUrl(value) {
+  const input = value.trim();
+
+  if (!input) {
+    throw new Error("请填写 GitHub 地址");
+  }
+
+  let url;
+  try {
+    url = new URL(/^https?:\/\//i.test(input) ? input : `https://${input}`);
+  } catch {
+    throw new Error("GitHub 地址格式不正确");
+  }
+
+  if (!/github\.com$/i.test(url.hostname)) {
+    throw new Error("请填写 github.com 地址");
+  }
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  const owner = parts[0] || "";
+  const repo = (parts[1] || "").replace(/\.git$/i, "");
+
+  if (!owner || !repo) {
+    throw new Error("GitHub 地址需要包含 owner/repo");
+  }
+
+  let branch = "";
+  let path = "";
+
+  if ((parts[2] === "blob" || parts[2] === "tree") && parts[3]) {
+    branch = parts[3];
+    path = parts.slice(4).join("/");
+  }
+
+  return {
+    url: `https://github.com/${owner}/${repo}`,
+    owner,
+    repo,
+    branch,
+    path: normalizeRepoPath(path)
+  };
+}
+
+function buildGithubRepoUrl(config) {
+  if (!config.owner || !config.repo) {
+    return "";
+  }
+
+  return `https://github.com/${config.owner}/${config.repo}`;
+}
+
+function populateFileList(files, selectedPath) {
+  const select = githubFields.fileList;
+  select.textContent = "";
+
+  if (!files.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "没有缓存的文件列表";
+    select.append(option);
+    return;
+  }
+
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "选择仓库文件";
+  select.append(empty);
+
+  files.forEach((path) => {
+    const option = document.createElement("option");
+    option.value = path;
+    option.textContent = path;
+    option.selected = path === selectedPath;
+    select.append(option);
+  });
 }
 
 function normalizeRepoPath(path) {

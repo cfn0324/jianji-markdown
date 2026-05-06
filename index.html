@@ -95,34 +95,29 @@
             <span>Token</span>
             <input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_...">
           </label>
-          <div class="field-row">
-            <label class="field">
-              <span>Owner</span>
-              <input id="githubOwner" type="text" autocapitalize="off" autocomplete="off" placeholder="cfn0324">
-            </label>
-            <label class="field">
-              <span>Repo</span>
-              <input id="githubRepo" type="text" autocapitalize="off" autocomplete="off" placeholder="jianji-markdown">
-            </label>
-          </div>
-          <div class="field-row">
-            <label class="field small">
-              <span>Branch</span>
-              <input id="githubBranch" type="text" autocapitalize="off" autocomplete="off" placeholder="main">
-            </label>
-            <label class="field">
-              <span>File path</span>
-              <input id="githubPath" type="text" autocapitalize="off" autocomplete="off" placeholder="notes/today.md">
-            </label>
-          </div>
+          <label class="field">
+            <span>GitHub 地址</span>
+            <input id="githubUrl" type="url" autocapitalize="off" autocomplete="off" placeholder="https://github.com/cfn0324/learn">
+          </label>
+          <label class="field">
+            <span>文件列表</span>
+            <select id="githubFileList">
+              <option value="">先保存配置或刷新列表</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>当前文件路径</span>
+            <input id="githubPath" type="text" autocapitalize="off" autocomplete="off" placeholder="notes/today.md">
+          </label>
 
           <div class="cloud-actions">
             <button class="primary-button" type="button" data-github="pull">拉取</button>
             <button class="primary-button" type="button" data-github="push">上传</button>
+            <button class="secondary-button" type="button" data-github="refresh">刷新列表</button>
             <button class="secondary-button" type="button" data-github="save">保存配置</button>
           </div>
 
-          <p class="settings-note">Token 只保存在本机，需要仓库 Contents 读写权限。</p>
+          <p class="settings-note">Token 只保存在本机。地址可填仓库主页或具体文件页，上传需要 Contents 读写权限。</p>
         </form>
       </section>
 

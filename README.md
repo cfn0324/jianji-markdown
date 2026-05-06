@@ -49,14 +49,20 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\setup-android-to
 应用内点右上角“云”打开 GitHub 设置，填写：
 
 - Token：需要仓库 Contents 读写权限
-- Owner：账号或组织名
-- Repo：仓库名
-- Branch：分支名，默认 `main`
-- File path：Markdown 文件路径，例如 `notes/today.md`
+- GitHub 地址：仓库主页或具体文件页，例如 `https://github.com/cfn0324/learn`
+- 文件列表：点“刷新列表”后选择仓库里的 Markdown 文件
+- 当前文件路径：选择文件后自动填写，也可以手动输入新文件路径
 
-“拉取”会把该路径的文件读入编辑器。“上传”会把当前编辑器内容写回该路径；文件不存在时会创建。
+“拉取”会把当前文件路径的文件读入编辑器。“上传”会把当前编辑器内容写回该路径；文件不存在时会创建。
 
 Token 只保存在当前设备本地。这个版本没有后端服务，不做 OAuth 跳转登录。
+
+GitHub 地址可以填：
+
+```text
+https://github.com/cfn0324/learn
+https://github.com/cfn0324/learn/blob/main/README.md
+```
 
 ## 表格编辑
 
