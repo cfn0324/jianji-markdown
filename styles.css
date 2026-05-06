@@ -460,6 +460,12 @@ body[data-mode="preview"] .md-toolbar {
   opacity: 1;
 }
 
+.toast.is-success {
+  border-color: rgba(15, 118, 110, 0.18);
+  background: #0f766e;
+  color: #ffffff;
+}
+
 .settings-backdrop {
   position: fixed;
   inset: 0;

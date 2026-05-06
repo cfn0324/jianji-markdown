@@ -666,7 +666,7 @@ function togglePrefix(line, prefix) {
 function openSettings() {
   const config = readGithubConfig();
   githubFields.token.value = config.token || "";
-  githubFields.url.value = config.url || buildGithubRepoUrl(config) || "https://github.com/cfn0324/jianji-markdown";
+  githubFields.url.value = config.url || buildGithubRepoUrl(config) || "";
   populateFileList(config.files || [], config.path || "");
   settingsBackdrop.hidden = false;
   settingsPanel.classList.add("is-open");
@@ -774,7 +774,7 @@ async function pullFromGithub() {
   const file = await getGithubFile(config);
   const content = await decodeBase64(file.content || "");
   receiveDocument(content, config.path);
-  showToast("已从 GitHub 拉取");
+  showToast("✓ 拉取成功", "success");
 }
 
 async function pushToGithub() {
@@ -829,7 +829,7 @@ async function pushToGithub() {
     populateFileList(config.files, config.path);
   }
 
-  showToast("已上传到 GitHub");
+  showToast("✓ 上传成功", "success");
 }
 
 async function getGithubFile(config) {
@@ -1129,12 +1129,14 @@ function focusEditor() {
   editor.focus({ preventScroll: true });
 }
 
-function showToast(message) {
+function showToast(message, tone = "") {
   window.clearTimeout(toastTimer);
   toast.textContent = message;
+  toast.classList.toggle("is-success", tone === "success");
   toast.classList.add("is-visible");
   toastTimer = window.setTimeout(() => {
     toast.classList.remove("is-visible");
+    toast.classList.remove("is-success");
   }, 1800);
 }
 
