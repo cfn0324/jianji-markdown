@@ -1,69 +1,179 @@
 # 简记 Markdown
 
-一个离线优先的手机 Markdown 写作和预览工具。页面、脚本和渲染库都放在本地，支持 KaTeX 数学公式和 Mermaid 图。
+简记是一个给手机用的 Markdown 写作和阅读器。
 
-## 准备
+它的目标很简单：打开就能写，切过去就能看。常用 Markdown 符号放在键盘旁边，不用在手机输入法里反复找 `##`、代码块、表格、公式这些符号。
 
-```bash
-npm install
+## 适合做什么
+
+- 写日记、读书笔记、课程笔记、灵感草稿
+- 在手机上查看 Markdown 文档
+- 离线保存本地草稿
+- 渲染 LaTeX 数学公式
+- 渲染 Mermaid 图表
+- 通过 GitHub 仓库管理自己的笔记文件
+
+## 功能
+
+- Markdown 写作和预览
+- 手机底部快捷工具栏
+- 加粗、斜体、标题、引用、列表、任务、链接、分隔线
+- 表格插入、增行、删行、增列、删列
+- 代码块和行内代码
+- KaTeX 数学公式渲染
+- Mermaid 图表渲染
+- GitHub 拉取和上传 Markdown 文件
+- 离线优先，主要资源都在本地
+
+## GitHub 笔记仓库
+
+你可以把 GitHub 当成自己的 Markdown 笔记仓库。
+
+在应用右上角打开 GitHub 设置，只需要填：
+
+- `Token`
+- `GitHub 地址`
+
+GitHub 地址填仓库主页即可，例如：
+
+```text
+https://github.com/你的用户名/你的仓库名
 ```
 
-安装会把 Markdown、KaTeX、Mermaid 复制到 `vendor/`，之后运行应用不需要外网。
+拉取时，应用会自动读取仓库里的 Markdown 文件，然后让你选择要打开哪一篇。
 
-## 本地运行
+上传时，应用会让你选择覆盖已有文件，或者输入一个新文件名来创建新笔记。
 
-```bash
-npm run serve
+Token 只保存在当前设备本地。简记没有后端服务器，也不会把 Token 发给除 GitHub API 以外的地方。
+
+## 获取 GitHub Token
+
+推荐使用 Fine-grained personal access token。
+
+打开 GitHub 后按这个路径：
+
+```text
+头像 -> Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens
 ```
 
-电脑打开 `http://127.0.0.1:4173`。手机和电脑在同一 Wi-Fi 下时，打开电脑的局域网地址，例如 `http://192.168.165.72:4173`。
+然后点 `Generate new token`。
 
-## 离线和手机
+建议这样配置：
 
-直接打开 `index.html` 可以使用本地资源，适合完全离线查看和写作。浏览器通常不会为 `file://` 页面启用 PWA 缓存。
+- `Token name`：随便写，比如 `Jianji Markdown`
+- `Expiration`：按自己习惯选择有效期
+- `Repository access`：选择 `Only select repositories`
+- 勾选你准备用来存笔记的仓库
 
-如果要在 Android 或 iOS 上“添加到主屏幕”并使用 Service Worker 离线缓存，需要通过 HTTPS 部署一次，或在设备本机用 `localhost` 访问。普通局域网 HTTP 地址适合预览和调试，但移动端浏览器通常不会注册 Service Worker。
+权限里找到 `Repository permissions`，至少开启：
+
+```text
+Contents: Read and write
+```
+
+如果你只是管理普通 `.md` 笔记，这一个权限通常就够了。
+
+如果你要编辑 `.github/workflows` 里的文件，还需要额外开启：
+
+```text
+Workflows: Read and write
+```
+
+生成后复制 Token，填到简记的 GitHub 设置里。
+
+GitHub 官方文档：
+
+- [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+- [Permissions required for fine-grained personal access tokens](https://docs.github.com/en/rest/overview/permissions-required-for-fine-grained-personal-access-tokens)
+
+## 上传 403 怎么办
+
+如果上传时出现 `403`，通常是 Token 权限不够。
+
+优先检查：
+
+- Token 是否选择了当前仓库
+- `Contents` 是否是 `Read and write`
+- 你是否对这个仓库有写入权限
+- Token 是否过期
+- 仓库默认分支是否开启了保护规则
+
+公开仓库读取可以不填 Token，但上传一定需要有写权限的 Token。
+
+## 数学公式
+
+行内公式：
+
+```markdown
+$E = mc^2$
+```
+
+公式块：
+
+```markdown
+$$
+\int_0^1 x^2 dx = \frac{1}{3}
+$$
+```
+
+## Mermaid
+
+````markdown
+```mermaid
+graph TD
+  A[想法] --> B[写下]
+  B --> C[保存到 GitHub]
+```
+````
 
 ## Android APK
 
-当前目录已经可以生成安卓 APK。现成安装包是：
+可以直接安装 Release 里的 APK：
 
 ```text
-JianjiMarkdown-debug.apk
+https://github.com/cfn0324/jianji-markdown/releases
 ```
 
-改完网页代码后重新打包：
+本地重新打包：
 
 ```bash
 npm run android:build
 ```
 
-如果 `tools/` 不存在，先运行：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\setup-android-tools.ps1
-```
-
-## GitHub 云端
-
-应用内点右上角“云”打开 GitHub 设置，填写：
-
-- Token：需要仓库 Contents 读写权限
-- GitHub 地址：仓库主页或具体文件页，例如 `https://github.com/cfn0324/learn`
-- 文件列表：点“刷新列表”后选择仓库里的 Markdown 文件
-- 当前文件路径：选择文件后自动填写，也可以手动输入新文件路径
-
-“拉取”会把当前文件路径的文件读入编辑器。“上传”会把当前编辑器内容写回该路径；文件不存在时会创建。
-
-Token 只保存在当前设备本地。这个版本没有后端服务，不做 OAuth 跳转登录。
-
-GitHub 地址可以填：
+生成的安装包在项目根目录：
 
 ```text
-https://github.com/cfn0324/learn
-https://github.com/cfn0324/learn/blob/main/README.md
+JianjiMarkdown-debug.apk
 ```
 
-## 表格编辑
+## 本地运行
 
-工具栏里的“表”会插入一个 2x2 内容表格。光标放在表格内时，可以使用“行+ / 行- / 列+ / 列-”调整表格。
+安装依赖：
+
+```bash
+npm install
+```
+
+启动本地预览：
+
+```bash
+npm run serve
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:4173
+```
+
+## 离线说明
+
+简记的 Markdown、KaTeX、Mermaid 等核心资源都放在本地，APK 可以离线使用。
+
+如果用浏览器版本，直接打开 `index.html` 也能写作和预览；如果想使用 PWA 缓存，需要通过 HTTPS 或设备本机 `localhost` 访问。
+
+## 一句话
+
+简记不是一个复杂的知识库系统。
+
+它只是想让你在手机上更容易写 Markdown，更舒服地看 Markdown，然后把重要的笔记安静地放回自己的 GitHub 仓库里。
