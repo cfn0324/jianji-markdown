@@ -25,6 +25,12 @@
 - GitHub 拉取和上传 Markdown 文件
 - 离线优先，主要资源都在本地
 
+## 在线体验
+
+网页版：https://cfn0324.github.io/jianji-markdown/
+
+网页版数据保存在当前浏览器本地，不会自动同步给其他用户或设备。如需跨设备同步，可以在应用内配置自己的 GitHub 仓库。
+
 ## GitHub 笔记仓库
 
 你可以把 GitHub 当成自己的 Markdown 笔记仓库。
