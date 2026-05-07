@@ -1034,10 +1034,21 @@ body[data-mode="preview"] .md-toolbar {
 
   .settings-panel {
     right: max(20px, env(safe-area-inset-right));
-    bottom: 20px;
+    bottom: 76px;
     left: auto;
     width: min(420px, calc(100vw - 40px));
     border: 1px solid var(--border);
     border-radius: 8px;
+    transform: translateY(calc(100% + 96px));
+  }
+
+  .picker-panel {
+    right: max(20px, env(safe-area-inset-right));
+    bottom: 76px;
+    left: auto;
+    width: min(420px, calc(100vw - 40px));
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transform: translateY(calc(100% + 96px));
   }
 }
